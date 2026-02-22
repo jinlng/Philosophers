@@ -1,0 +1,157 @@
+NAME := philos
+BONUS_NAME := philos_bonus
+
+CC := gcc
+CFLAGS := -Wall -Wextra -Werror -pthread -ggdb
+CFLAGS_BONUS := -Wall -Wextra -Werror -pthread -ggdb
+DEBUG_FLAGS := -g -fsanitize=thread
+DEPFLAGS := -MMD -MP -MF $(@:.o=.d)
+
+MANDATORY_DIR := philo
+BONUS_DIR := philo_bonus
+
+MANDATORY_SRCS := $(wildcard $(MANDATORY_DIR)/*.c)
+BONUS_SRCS := $(wildcard $(BONUS_DIR)/*.c)
+
+MANDATORY_OBJS = $(MANDATORY_SRCS:.c=.o)
+BONUS_OBJS = $(BONUS_SRCS:.c=.o)
+
+# MANDATORY_OBJS := $(patsubst $(MANDATORY_DIR)/%.c,$(MANDATORY_DIR)/%.o,$(MANDATORY_SRCS))
+# BONUS_OBJS := $(patsubst $(BONUS_DIR)/%.c,$(BONUS_DIR)/%.o,$(BONUS_SRCS))
+
+MANDATORY_DEPS := $(MANDATORY_OBJS:.o=.d)
+BONUS_DEPS := $(BONUS_OBJS:.o=.d)
+
+-include $(MANDATORY_DEPS) $(BONUS_DEPS)
+
+GREEN := \033[0;32m
+RED := \033[0;31m
+YELLOW := \033[0;33m
+BLUE := \033[0;34m
+NC := \033[0m
+
+# **************************************************************************** #
+#                                  RULES                                       #
+# **************************************************************************** #
+
+all: $(NAME)
+
+$(NAME): $(MANDATORY_OBJS)
+	@printf "$(BLUE)Linking $(NAME)...$(NC)\n"
+	$(CC) $(CFLAGS) $^ -o $@
+	@echo "$(GREEN)✓ $(NAME) compiled successfully$(NC)"
+
+bonus: $(BONUS_NAME)
+
+$(BONUS_NAME): $(BONUS_OBJS)
+	@printf "$(BLUE)Linking $(BONUS_NAME)...$(NC)\n"
+	$(CC) $(CFLAGS_BONUS) $^ -o $@
+	@echo "$(GREEN)✓ $(BONUS_NAME) compiled successfully$(NC)"
+
+debug: CFLAGS += $(DEBUG_FLAGS)
+debug: CFLAGS_BONUS += $(DEBUG_FLAGS)
+debug: re
+
+# Compile rules
+$(MANDATORY_DIR)/%.o: $(MANDATORY_DIR)/%.c
+	@printf "$(YELLOW)[MANDATORY] Compiling $<...$(NC)\n"
+	$(CC) $(CFLAGS) $(DEPFLAGS) -c $< -o $@
+
+$(BONUS_DIR)/%.o: $(BONUS_DIR)/%.c
+	@printf "$(YELLOW)[BONUS] Compiling $<...$(NC)\n"
+	$(CC) $(CFLAGS_BONUS) $(DEPFLAGS) -c $< -o $@
+
+clean:
+	@printf "$(RED)Cleaning object files...$(NC)\n"
+	@rm -f $(MANDATORY_OBJS) $(BONUS_OBJS)
+	@rm -f $(MANDATORY_DEPS) $(BONUS_DEPS)
+	@find . -name "*.d" -delete 2>/dev/null || true
+	@rm -f output.log output_bonus.log
+	@printf "$(GREEN)Clean complete!$(NC)\n"
+
+fclean: clean
+	@printf "$(RED)Cleaning executables...$(NC)\n"
+	@rm -f $(NAME) $(BONUS_NAME)
+	@printf "$(GREEN)Full clean complete!$(NC)\n"
+
+re: fclean all
+
+rebonus: fclean bonus
+
+both: all bonus
+	@echo "$(GREEN)✓ Both versions compiled$(NC)"
+
+# -------------------- Tests --------------------
+
+test: all
+	@echo "$(BLUE)=== Running basic tests ===$(NC)"
+	@echo "1. Single philosopher:"
+	@timeout 2 ./$(NAME) 1 800 200 200 && echo "✓" || echo "✗"
+	@echo ""
+	@echo "2. 4 philosophers:"
+	@timeout 2 ./$(NAME) 4 410 200 200 && echo "✓" || echo "✗"
+	@echo ""
+	@echo "3. 5 philosophers with meal count:"
+	@timeout 3 ./$(NAME) 5 800 200 200 3 && echo "✓" || echo "✗"
+
+test_bonus: bonus
+	@echo "$(BLUE)=== Running bonus tests ===$(NC)"
+	@echo "1. Single philosopher:"
+	@timeout 2 ./$(BONUS_NAME) 1 800 200 200 && echo "✓" || echo "✗"
+	@echo ""
+	@echo "2. 4 philosophers:"
+	@timeout 2 ./$(BONUS_NAME) 4 410 200 200 && echo "✓" || echo "✗"
+	@echo ""
+	@echo "3. 5 philosophers with meal count:"
+	@timeout 3 ./$(BONUS_NAME) 5 800 200 200 3 && echo "✓" || echo "✗"
+
+valgrind: all
+	@echo "$(BLUE)Running valgrind on mandatory part...$(NC)"
+	valgrind --leak-check=full --show-leak-kinds=all \
+	         --track-origins=yes --error-exitcode=1 \
+	         ./$(NAME) 4 410 200 200
+
+valgrind_bonus: bonus
+	@echo "$(BLUE)Running valgrind on bonus part...$(NC)"
+	valgrind --leak-check=full --show-leak-kinds=all \
+	         --track-origins=yes --error-exitcode=1 \
+	         --trace-children=yes \
+	         ./$(BONUS_NAME) 4 410 200 200
+
+
+# -------------------- Logging --------------------
+
+runlog:
+	@rm -f output.log
+	@./$(NAME) 5 800 200 200 7 > output.log
+	@echo "=== Meal counts ==="
+	@grep "is eating" output.log | \
+	awk '{count[$$2]++} END {for (id in count) printf "Philosopher %d ate %d times\n", id, count[id]}'
+
+runlog_bonus:
+	@rm -f output.log
+	@./$(BONUS_NAME) 5 800 200 200 7 > output.log
+	@echo "=== Meal counts ==="
+	@grep "is eating" output.log | \
+	awk '{count[$$2]++} END {for (id in count) printf "Philosopher %d ate %d times\n", id, count[id]}'
+
+# -------------------- Cleanup helpers --------------------
+
+clean_semaphores:
+	@echo "$(RED)Cleaning semaphores...$(NC)"
+	@for sem in /dev/shm/sem.philo_*; do \
+		if [ -e "$$sem" ]; then \
+			sem_name=$$(basename $$sem); \
+			echo "Removing $$sem_name"; \
+			sem_unlink $$sem_name 2>/dev/null || true; \
+		fi; \
+	done
+	@echo "$(GREEN)Semaphore cleanup done$(NC)"
+
+clean_all: fclean clean_semaphores
+	@echo "$(GREEN)Everything cleaned$(NC)"
+
+.PHONY: all bonus clean fclean re rebonus both debug \
+	test test_bonus test1 test2 test3 test4 test5 test_odd test_31 \
+	valgrind valgrind_bonus \
+	runlog runlog_bonus info clean_semaphores clean_all
