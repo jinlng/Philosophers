@@ -6,7 +6,7 @@
 /*   By: jinliang <marvin@42.fr>                    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/12/07 10:46:39 by jinliang          #+#    #+#             */
-/*   Updated: 2026/01/12 17:21:44 by jinliang         ###   ########.fr       */
+/*   Updated: 2026/02/09 14:58:46 by jinliang         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -18,6 +18,8 @@ int	init_data(t_data *data, int argc, char **argv)
 	data->time_to_die = ft_atoi(argv[2]);
 	data->time_to_eat = ft_atoi(argv[3]);
 	data->time_to_sleep = ft_atoi(argv[4]);
+	data->start_time = get_current_time();
+	data->someone_died = 0;
 	if (argc == 6)
 		data->must_eat_count = ft_atoi(argv[5]);
 	else
@@ -30,8 +32,6 @@ int	init_data(t_data *data, int argc, char **argv)
 		return (0);
 	if (!init_philosophers(data))
 		return (0);
-	data->start_time = get_current_time();
-	data->someone_died = 0;
 	return (1);
 }
 
@@ -68,7 +68,7 @@ int	init_philosophers(t_data *data)
 		data->philos[i].id = i + 1;
 		data->philos[i].left_fork = &data->forks[i];
 		data->philos[i].right_fork = &data->forks[(i + 1) % data->num_philos];
-		data->philos[i].last_meal_time = get_current_time();
+		data->philos[i].last_meal_time = data->start_time;
 		data->philos[i].meal_count = 0;
 		data->philos[i].data = data;
 	}

@@ -56,7 +56,7 @@ test2: all
 
 test3: all
 	@echo "$(GREEN)Test 3: 5 philosophers with meal count (should stop after 7 meals)$(NC)"
-	@./$(NAME) 5 800 200 200 7 || true
+	@./$(NAME) 5 610 200 200 7 || true
 
 test4: all
 	@echo "$(GREEN)Test 4: 1 philosopher (should die)$(NC)"
@@ -68,6 +68,6 @@ test5: all
 
 valgrind: all
 	@echo "$(GREEN)Running with valgrind...$(NC)"
-	@valgrind --leak-check=full --show-leak-kinds=all ./$(NAME) 4 410 200 200
+	@valgrind --leak-check=full --show-leak-kinds=all ./$(NAME) 4 410 200 200 5
 
 .PHONY: all clean fclean re debug test test1 test2 test3 test4 test5 valgrind

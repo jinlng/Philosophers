@@ -6,7 +6,7 @@
 /*   By: jinliang <marvin@42.fr>                    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/12/07 10:46:35 by jinliang          #+#    #+#             */
-/*   Updated: 2025/12/07 10:57:14 by jinliang         ###   ########.fr       */
+/*   Updated: 2026/02/11 15:26:43 by jinliang         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -46,24 +46,25 @@ typedef struct s_data
 }	t_data;
 
 int			init_data(t_data *data, int argc, char **argv);
-int			init_philosophers(t_data *data);
 int			init_mutexes(t_data *data);
+int			init_philosophers(t_data *data);
 
 long long	get_current_time(void);
-void		print_status(t_philo *philo, char *status);
-void		smart_sleep(long long time);
+void		smart_sleep(long long time, t_data *data);
 int			ft_atoi(const char *str);
+void		print_status(t_philo *philo, char *status);
 
-void		*philo_routine(void *arg);
+void		take_forks(t_philo *philo);
 void		philo_eat(t_philo *philo);
 void		philo_sleep(t_philo *philo);
 void		philo_think(t_philo *philo);
 
 void		start_simulation(t_data *data);
 void		monitor_loop(t_data *data);
-int			check_philosopher_death(t_data *data);
+int			check_death(t_data *data);
 void		cleanup(t_data *data);
 
-int			print_error(char *str);
+void		*philo_routine(void *arg);
+void		solo_routine(t_philo *philo);
 
 #endif

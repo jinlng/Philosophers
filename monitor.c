@@ -6,7 +6,7 @@
 /*   By: jinliang <marvin@42.fr>                    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/12/07 10:52:48 by jinliang          #+#    #+#             */
-/*   Updated: 2026/01/12 15:18:12 by jinliang         ###   ########.fr       */
+/*   Updated: 2026/02/22 15:17:38 by jinliang         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -22,7 +22,7 @@ void	start_simulation(t_data *data)
 		if (pthread_create(&data->philos[i].thread, NULL, \
 			philo_routine, &data->philos[i]) != 0)
 		{
-			print_error("Error: Failed to create thread");
+			printf("Error: Failed to create thread");
 			return ;
 		}
 	}
@@ -31,7 +31,7 @@ void	start_simulation(t_data *data)
 	while (++i < data->num_philos)
 	{
 		if (pthread_join(data->philos[i].thread, NULL) != 0)
-			print_error("Error: Failed to join thread");
+			printf("Error: Failed to join thread");
 	}
 }
 
@@ -41,7 +41,7 @@ void	monitor_loop(t_data *data)
 
 	while (1)
 	{
-		if (check_philosopher_death(data))
+		if (check_death(data))
 			break ;
 		if (data->must_eat_count > 0)
 		{
@@ -56,28 +56,32 @@ void	monitor_loop(t_data *data)
 			if (i == data->num_philos)
 				break ;
 		}
-		usleep(1000);
+		usleep(500);
 	}
 }
 
-int	check_philosopher_death(t_data *data)
+int	check_death(t_data *data)
 {
 	int			i;
-	long long	current_time;
 
 	i = -1;
 	while (++i < data->num_philos)
 	{
 		pthread_mutex_lock(&data->death_mutex);
-		current_time = get_current_time();
-		if (current_time - data->philos[i].last_meal_time > data->time_to_die)
+		if (!(data->must_eat_count > 0
+				&& data->philos[i].meal_count >= data->must_eat_count)
+			&& get_current_time() - data->philos[i].last_meal_time
+			> data->time_to_die)
 		{
-			data->someone_died = 1;
+			if (!data->someone_died)
+			{
+				data->someone_died = 1;
+				pthread_mutex_lock(&data->print_mutex);
+				printf("%lld %d died\n", get_current_time() - data->start_time,
+					data->philos[i].id);
+				pthread_mutex_unlock(&data->print_mutex);
+			}
 			pthread_mutex_unlock(&data->death_mutex);
-			pthread_mutex_lock(&data->print_mutex);
-			printf("%lld %d died\n", \
-				current_time - data->start_time, data->philos[i].id);
-			pthread_mutex_unlock(&data->print_mutex);
 			return (1);
 		}
 		pthread_mutex_unlock(&data->death_mutex);

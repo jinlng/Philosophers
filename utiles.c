@@ -6,7 +6,7 @@
 /*   By: jinliang <marvin@42.fr>                    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/12/07 10:52:03 by jinliang          #+#    #+#             */
-/*   Updated: 2026/01/12 17:22:17 by jinliang         ###   ########.fr       */
+/*   Updated: 2026/02/07 15:49:10 by jinliang         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -20,13 +20,24 @@ long long	get_current_time(void)
 	return ((tv.tv_sec * 1000) + (tv.tv_usec / 1000));
 }
 
-void	smart_sleep(long long time)
+void	smart_sleep(long long time, t_data *data)
 {
 	long long	start;
 
 	start = get_current_time();
 	while (get_current_time() - start < time)
+	{
+		if (get_current_time() - start >= time)
+			break ;
+		pthread_mutex_lock(&data->death_mutex);
+		if (data->someone_died)
+		{
+			pthread_mutex_unlock(&data->death_mutex);
+			return ;
+		}
+		pthread_mutex_unlock(&data->death_mutex);
 		usleep(100);
+	}
 }
 
 int	ft_atoi(const char *str)
